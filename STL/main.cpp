@@ -124,6 +124,8 @@ public:
 		_data = newData;
 	}
 
+	void clear() { _size = 0; }
+
 	T& operator[](int pos) { return _data[pos]; }
 
 public:
@@ -159,5 +161,9 @@ int main()
 	{
 		cout << (*it) << endl;
 	}
+
+	v.clear();
+	cout << v.size() << " " << v.capacity() << endl;
+
 	return 0;
 }
