@@ -1,169 +1,193 @@
 #include <iostream>
 #include <vector>
+#include <list>
 
 using namespace std;
+
+template<typename T>
+class Node
+{
+public:
+	Node() : _next(nullptr), _prev(nullptr), _data(T())
+	{
+
+	}
+
+	Node(const T& value) : _next(nullptr), _prev(nullptr), _data(value)
+	{
+
+	}
+
+public:
+	Node* _next;
+	Node* _prev;
+	T _data;
+};
 
 template<typename T>
 class Iterator
 {
 public:
-	Iterator() : _ptr(nullptr)
+	Iterator() : _node(nullptr)
 	{
 
 	}
-	Iterator(T* ptr) : _ptr(ptr)
+
+	Iterator(Node<T>* node) : _node(node)
 	{
 
 	}
 
 	Iterator& operator++()
 	{
-		_ptr++;
+		_node = _node->_next;
 		return *this;
 	}
-	
+
 	Iterator operator++(int)
 	{
 		Iterator temp = *this;
-		_ptr++;
+		_node = _node->_next;
 		return temp;
 	}
+
 	Iterator& operator--()
 	{
-		_ptr--;
+		_node = _node->_prev;
 		return *this;
 	}
 
 	Iterator operator--(int)
 	{
 		Iterator temp = *this;
-		_ptr--;
-		return temp;
-	}
-
-	bool operator==(const Iterator& right)
-	{
-		return _ptr == right._ptr;
-	}
-
-	bool operator!=(const Iterator& right)
-	{
-		return _ptr != right._ptr;
-	}
-
-	Iterator operator+(const int count)
-	{
-		Iterator temp = *this;
-		temp._ptr += count;
-		return temp;
-	}
-
-	Iterator operator-(const int count)
-	{
-		Iterator temp = *this;
-		temp._ptr -= count;
+		_node = _node->_prev;
 		return temp;
 	}
 
 	T& operator*()
 	{
-		return *_ptr;
+		return _node->_data;
+	}
+
+	bool operator==(const Iterator& right)
+	{
+		return _node == right._node;
+	}
+
+	bool operator!=(const Iterator& right)
+	{
+		return _node != right._node;
 	}
 
 public:
-	T* _ptr;
+	Node<T>* _node;
 };
 
-
 template<typename T>
-class Vector
+class List
 {
 public:
-	Vector() : _data(nullptr), _size(0), _capacity(0)
+	List() : _size(0)
 	{
-
-	}
-	~Vector()
-	{
-		if (_data)
-		{
-			delete[] _data;
-		}
+		_header = new Node<T>();
+		_header->_next = _header;
+		_header->_prev = _header;
 	}
 
-	int size() { return _size; }
-	int capacity() { return _capacity; }
-
-	void push_back(const T& val)
+	~List()
 	{
-		if (_size == _capacity)
+		while (_size > 0)
 		{
-			int newCapacity = static_cast<int>(_capacity * 1.5);
-			if (newCapacity == _capacity)
-			{
-				newCapacity++;
-			}
-			reserve(newCapacity);
+			pop_back();
 		}
-		_data[_size++] = val;
+		delete _header;
 	}
 
-	void reserve(int capacity)
+	void push_back(const T& value)
 	{
-		_capacity = capacity;
-		T* newData = new T[_capacity];
-
-		for (int i = 0; i < _size; ++i)
-		{
-			newData[i] = _data[i];
-		}
-		if (_data)
-		{
-			delete[] _data;
-		}
-		_data = newData;
+		AddNode(_header, value);
 	}
 
-	void clear() { _size = 0; }
+	Node<T>* AddNode(Node<T>* before, const T& value)
+	{
+		Node<T>* node = new Node<T>(value);
 
-	T& operator[](int pos) { return _data[pos]; }
+		Node<T>* prevNode = before->_prev;
+		prevNode->_next = node;
+		node->_prev = prevNode;
+		node->_next = before;
+		before->_prev = node;
+
+		_size++;
+
+		return node;
+	}
+
+	void pop_back()
+	{
+		RemoveNode(_header->_prev);
+	}
+
+	Node<T>* RemoveNode(Node<T>* node)
+	{
+		Node<T>* prevNode = node->_prev;
+		Node<T>* nextNode = node->_next;
+
+		prevNode->_next = nextNode;
+		nextNode->_prev = prevNode;
+
+		delete node;
+
+		_size--;
+
+		return nextNode;
+	}
 
 public:
 	typedef Iterator<T> iterator;
-	
-	iterator begin() { return iterator(&_data[0]); }
-	iterator end() { return begin() + _size; }
+	iterator begin() { return _header->_next; }
+	iterator end() { return _header; }
+
+	iterator insert(iterator it, const T& value)
+	{
+		Node<T>* node = AddNode(it._node, value);
+		return iterator(node);
+	}
+
+	iterator erase(iterator it)
+	{
+		Node<T>* node = RemoveNode(it._node);
+		return iterator(node);
+	}
 
 private:
-	T* _data;
+	Node<T>* _header;
 	int _size;
-	int _capacity;
 };
 
 int main()
 {
-	Vector<int> v;
-
-	//v.reserve(100);
-
-	for (int i = 0; i < 100; ++i)
+	List<int> li;
+	List<int>::iterator eraseit;
+	for (int i = 0; i < 10; ++i)
 	{
-		v.push_back(i);
-		cout << v.size() << " " << v.capacity() << endl;
+		if (i == 5)
+		{
+			eraseit = li.insert(li.end(), i);
+		}
+		else
+		{
+			li.push_back(i);
+		}
 	}
-	for (int i = 0; i < v.size(); ++i)
-	{
-		cout << v[i] << endl;
-	}
+	li.erase(eraseit);
 
-	cout << "---------------------------------" << endl;
-	for (Vector<int>::iterator it = v.begin(); it != v.end(); ++it)
-	{
-		cout << (*it) << endl;
-	}
+	li.pop_back();
 
-	v.clear();
-	cout << v.size() << " " << v.capacity() << endl;
+	for (List<int>::iterator it = li.begin(); it != li.end(); ++it)
+	{
+		cout << *it << endl;
+	}
 
 	return 0;
 }
